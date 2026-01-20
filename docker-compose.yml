@@ -1,0 +1,44 @@
+
+services:
+  web:
+    build: ./.devcontainer
+    working_dir: /workspaces/story-trials
+    volumes:
+      - ./:/workspaces/story-trials
+    command: sh -lc "pnpm --filter @story/web dev"
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+
+  api:
+    build: ./.devcontainer
+    working_dir: /workspaces/story-trials
+    volumes:
+      - ./:/workspaces/story-trials
+    command: sh -lc "pnpm --filter @story/api dev"
+    ports:
+      - "4000:4000"
+    depends_on:
+      - postgres
+
+  postgres:
+    image: postgres:16
+    container_name: storytrials-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: story
+      POSTGRES_PASSWORD: story
+      POSTGRES_DB: storytrials
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U story -d storytrials"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  pgdata:
