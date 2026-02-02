@@ -1,0 +1,9 @@
+# Files not relevant to Story chain bundles / uploads
+node_modules
+.next
+.turbo
+.vercel
+.env.secrets
+.DS_Store
+dist
+build

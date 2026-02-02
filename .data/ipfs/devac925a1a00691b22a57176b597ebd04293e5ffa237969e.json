@@ -1,0 +1,1 @@
+{"title":"Test Clinical Data Asset","description":"Synthetic test data for database verification","dataCid":"QmTest123456789","attributes":[{"trait_type":"dataType","value":"clinical"},{"trait_type":"synthetic","value":true}],"createdAt":"2026-01-13T23:11:23.230Z","version":"1.0","standard":"storytrials-metadata"}
