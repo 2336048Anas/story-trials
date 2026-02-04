@@ -6,3 +6,10 @@ dist
 build
 .turbo
 .vercel
+
+# AI/Development artifacts
+claude.md
+.claude/
+setup-postgres.sh
+docs-backup/
+.git.backup/
