@@ -4,6 +4,8 @@ import dotenv from "dotenv";
 import assetsRouter from "./routes/assets.js";
 import trialsRouter from "./routes/trials.js";
 import paymentsRouter from "./routes/payments.js";
+import usersRouter from "./routes/users.js";
+import licensesRouter from "./routes/licenses.js";
 
 dotenv.config();
 
@@ -23,6 +25,8 @@ app.get("/health", (_req, res) => {
 app.use("/assets", assetsRouter);
 app.use("/trials", trialsRouter);
 app.use("/payments", paymentsRouter);
+app.use("/users", usersRouter);
+app.use("/licenses", licensesRouter);
 
 app.use((req, res) => res.status(404).json({ ok: false, error: "Not found" }));
 

@@ -1,0 +1,45 @@
+# Node / pnpm
+node_modules/
+.pnpm-store/
+.pnpm-debug.log
+npm-debug.log*
+yarn-error.log*
+*.tsbuildinfo
+
+# Monorepo builds
+dist/
+build/
+coverage/
+.vitest/
+test-results/
+playwright-report/
+
+# Next.js
+apps/web/.next/
+apps/web/out/
+
+# API / misc
+apps/api/.next/
+*.log
+
+# Prisma (keep migrations/, ignore local sqlite if any)
+node_modules/.prisma/
+.prisma/
+dev.db
+dev.db-journal
+
+# Env & secrets (keep examples)
+.env
+.env.*
+!.env.example
+apps/api/.env
+apps/web/.env.local
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Docker (in case a folder got created)
+pgdata/

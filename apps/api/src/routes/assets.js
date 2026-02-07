@@ -57,6 +57,37 @@ router.get("/", async (_req, res) => {
   }
 });
 
+// Get single asset by ID
+router.get("/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const asset = await prisma.dataAsset.findUnique({
+      where: { id },
+      include: {
+        owner: {
+          select: {
+            id: true,
+            walletAddress: true,
+            name: true,
+          },
+        },
+      },
+    });
+
+    if (!asset) {
+      return res.status(404).json({ error: "Asset not found" });
+    }
+
+    return res.json({ ok: true, asset });
+  } catch (err) {
+    console.error("get asset error:", err);
+    return res
+      .status(500)
+      .json({ error: "Internal error", details: err.message });
+  }
+});
+
 router.post("/register", async (req, res) => {
   try {
     const parsed = RegisterSchema.safeParse(req.body);

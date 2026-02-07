@@ -49,6 +49,58 @@ export interface CreateTrialResponse {
   note: string;
 }
 
+export interface TrialResponse {
+  ok: boolean;
+  trial: Trial;
+}
+
+export interface UpdateTrialPayload {
+  title?: string;
+  description?: string;
+  isOpen?: boolean;
+}
+
+// Submission types
+export type SubmissionStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
+
+export interface Submission {
+  id: string;
+  createdAt: string;
+  updatedAt: string;
+  userId: string;
+  trialId: string;
+  dataCid: string;
+  assetId?: string;
+  status: SubmissionStatus;
+  user?: {
+    id: string;
+    name?: string;
+    walletAddress?: string;
+  };
+  asset?: DataAsset;
+}
+
+export interface CreateSubmissionPayload {
+  userId: string;
+  dataCid: string;
+  assetId?: string;
+}
+
+export interface UpdateSubmissionPayload {
+  status: SubmissionStatus;
+}
+
+export interface SubmissionsResponse {
+  ok: boolean;
+  submissions: Submission[];
+}
+
+export interface SubmissionResponse {
+  ok: boolean;
+  submission: Submission;
+  note?: string;
+}
+
 // Asset types
 export interface DataAsset {
   id: string;
@@ -64,6 +116,16 @@ export interface DataAsset {
   ipAssetId?: string;
   storyChainId?: number;
   storyTxHash?: string;
+  owner?: {
+    id: string;
+    walletAddress?: string;
+    name?: string;
+  };
+}
+
+export interface AssetResponse {
+  ok: boolean;
+  asset: DataAsset;
 }
 
 export interface RegisterAssetPayload {
@@ -96,6 +158,69 @@ export interface RegisterAssetResponse {
   };
 }
 
+// License types
+export type LicenseStatus = 'ISSUED' | 'REVOKED';
+
+export interface License {
+  id: string;
+  createdAt: string;
+  updatedAt: string;
+  status: LicenseStatus;
+  assetId: string;
+  buyerId: string;
+  txHash?: string;
+  expiresAt?: string;
+  chainLicenseId?: string;
+  asset?: {
+    id: string;
+    title: string;
+    description?: string;
+    ipfsCid: string;
+    metadataCid?: string;
+    isListed: boolean;
+    ipAssetId?: string;
+    storyChainId?: number;
+    owner?: {
+      id: string;
+      walletAddress?: string;
+      name?: string;
+    };
+  };
+  buyer?: {
+    id: string;
+    walletAddress?: string;
+    name?: string;
+  };
+  payment?: {
+    id: string;
+    amount: number;
+    currency: string;
+  };
+  royalties?: RoyaltyEvent[];
+}
+
+export interface LicensesResponse {
+  ok: boolean;
+  licenses: License[];
+}
+
+export interface LicenseResponse {
+  ok: boolean;
+  license: License;
+}
+
+export interface CreateLicensePayload {
+  assetId: string;
+  buyerAddress: string;
+  expiresAt?: string;
+}
+
+export interface CreateLicenseResponse {
+  ok: boolean;
+  license: License;
+  warning: string;
+}
+
 // Payment types (synthetic only)
 export interface CreatePaymentPayload {
   licenseId: string;
@@ -122,4 +247,97 @@ export interface CreateRoyaltyResponse {
   ok: boolean;
   royalty: any;
   warning: string;
+}
+
+// Royalty types (synthetic only)
+export type PayoutStatus = 'PENDING' | 'PAID' | 'FAILED';
+export type Currency = 'USD' | 'EUR' | 'GBP';
+
+export interface RoyaltyEvent {
+  id: string;
+  createdAt: string;
+  licenseId: string;
+  recipientId: string;
+  amount: number; // minor units (cents)
+  currency: Currency;
+  note?: string;
+  payoutId?: string;
+  license?: {
+    id: string;
+    asset?: {
+      id: string;
+      title: string;
+    };
+  };
+  payout?: {
+    id: string;
+    status: PayoutStatus;
+  };
+}
+
+export interface Payout {
+  id: string;
+  createdAt: string;
+  updatedAt: string;
+  recipientId: string;
+  amount: number; // minor units (cents)
+  currency: Currency;
+  status: PayoutStatus;
+  reference?: string;
+  events?: {
+    id: string;
+    amount: number;
+    currency: Currency;
+    licenseId: string;
+  }[];
+}
+
+export interface RoyaltiesResponse {
+  ok: boolean;
+  royalties: RoyaltyEvent[];
+  warning: string;
+}
+
+export interface PayoutsResponse {
+  ok: boolean;
+  payouts: Payout[];
+  warning: string;
+}
+
+// User profile types
+export interface UserProfile extends User {
+  _count?: {
+    assets: number;
+    trials: number;
+    submissions: number;
+  };
+}
+
+export interface UserProfileResponse {
+  ok: boolean;
+  user: UserProfile;
+}
+
+export interface UserAssetsResponse {
+  ok: boolean;
+  assets: DataAsset[];
+}
+
+export interface UserTrialsResponse {
+  ok: boolean;
+  trials: Trial[];
+}
+
+export interface UserSubmission extends Submission {
+  trial?: {
+    id: string;
+    title: string;
+    rewardUsd: number;
+    isOpen: boolean;
+  };
+}
+
+export interface UserSubmissionsResponse {
+  ok: boolean;
+  submissions: UserSubmission[];
 }

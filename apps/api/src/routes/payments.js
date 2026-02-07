@@ -107,4 +107,67 @@ router.post("/royalties", syntheticOnlyMiddleware, async (req, res) => {
   }
 });
 
+// List royalty events for a recipient
+router.get("/royalties", async (req, res) => {
+  try {
+    const { recipientId } = req.query;
+    if (!recipientId) {
+      return res.status(400).json({ error: "recipientId query param required" });
+    }
+
+    const royalties = await prisma.royaltyEvent.findMany({
+      where: { recipientId },
+      include: {
+        license: {
+          include: { asset: { select: { id: true, title: true } } },
+        },
+        payout: { select: { id: true, status: true } },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    return res.json({
+      ok: true,
+      royalties,
+      warning: "SYNTHETIC DATA ONLY - No real financial transaction occurred.",
+    });
+  } catch (err) {
+    console.error("list royalties error:", err);
+    return res
+      .status(500)
+      .json({ error: "Internal error", details: err.message });
+  }
+});
+
+// List payouts for a recipient
+router.get("/payouts", async (req, res) => {
+  try {
+    const { recipientId } = req.query;
+    if (!recipientId) {
+      return res.status(400).json({ error: "recipientId query param required" });
+    }
+
+    const payouts = await prisma.payout.findMany({
+      where: { recipientId },
+      include: {
+        events: {
+          select: { id: true, amount: true, currency: true, licenseId: true },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    return res.json({
+      ok: true,
+      payouts,
+      warning: "SYNTHETIC DATA ONLY - No real financial transaction occurred.",
+    });
+  } catch (err) {
+    console.error("list payouts error:", err);
+    return res
+      .status(500)
+      .json({ error: "Internal error", details: err.message });
+  }
+});
+
 export default router;

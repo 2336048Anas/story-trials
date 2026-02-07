@@ -19,6 +19,14 @@ export function useAssets() {
   });
 }
 
+export function useAsset(id: string) {
+  return useQuery({
+    queryKey: ['assets', id],
+    queryFn: () => api.assets.get(id),
+    enabled: !!id,
+  });
+}
+
 export function useRegisterAsset() {
   const queryClient = useQueryClient();
 
