@@ -25,6 +25,7 @@ apps/api/.next/
 # Prisma (keep migrations/, ignore local sqlite if any)
 node_modules/.prisma/
 .prisma/
+prisma/src/generated/
 dev.db
 dev.db-journal
 

@@ -7,7 +7,7 @@ build
 .turbo
 .vercel
 
-# AI/Development artifacts
+# Development artifacts
 claude.md
 .claude/
 setup-postgres.sh

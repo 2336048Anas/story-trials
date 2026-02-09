@@ -3,7 +3,8 @@ import express from "express";
 import { z } from "zod";
 import { prisma } from "../lib/prisma.js";
 import { makeIpfsClient, addJson } from "../lib/ipfs.js";
-import { registerIpAsset } from "../lib/story.js";
+import { mintAndRegisterIpWithTerms, PILFlavor } from "../lib/story.js";
+import { isRealMode } from "../lib/synthetic-guard.js";
 import { findOrCreateUserByWallet } from "../lib/user-utils.js";
 
 const router = express.Router();
@@ -117,36 +118,75 @@ router.post("/register", async (req, res) => {
     const ipfs = makeIpfsClient();
     const metadataCid = await addJson(ipfs, metadata);
 
-    // 4) Register IP asset on Story Protocol (mock or real)
+    // 4) Register IP asset on Story Protocol (real or mock)
     const chain = chainId ?? Number(process.env.STORY_CHAIN_ID || 1513);
-    const { ipAssetId, txHash } = await registerIpAsset({
-      owner: ownerAddress,
-      metadataCid,
-      chainId: chain,
-    });
+
+    let ipAssetId, txHash, tokenId, licenseTermsId;
+
+    if (isRealMode()) {
+      // Real blockchain: mint NFT + register IP + attach license terms in one tx
+      const result = await mintAndRegisterIpWithTerms({
+        spgNftContract: process.env.SPG_NFT_CONTRACT,
+        licenseTermsData: [
+          {
+            terms: PILFlavor.nonCommercialSocialRemixing,
+          },
+        ],
+        ipMetadata: {
+          ipMetadataURI: metadataCid,
+          ipMetadataHash: "0x0000000000000000000000000000000000000000000000000000000000000000",
+          nftMetadataURI: metadataCid,
+          nftMetadataHash: "0x0000000000000000000000000000000000000000000000000000000000000000",
+        },
+        recipient: ownerAddress,
+      });
+
+      ipAssetId = result.ipId;
+      txHash = result.txHash;
+      tokenId = result.tokenId;
+      licenseTermsId = result.licenseTermsIds?.[0] || null;
+    } else {
+      // Mock mode: generate synthetic identifiers
+      const mockRand = Math.random().toString(36).slice(2, 10);
+      ipAssetId = `0xmock${mockRand}${"0".repeat(34 - mockRand.length)}`;
+      txHash = `0xmock${mockRand}${"0".repeat(58 - mockRand.length)}`;
+      tokenId = String(Math.floor(Math.random() * 100000));
+      licenseTermsId = "1";
+    }
 
     // 5) Persist in Postgres with correct schema fields
     const asset = await prisma.dataAsset.create({
       data: {
         title,
         description,
-        ownerId: owner.id, // User ID, not wallet address
-        ipfsCid, // The actual data CID
-        metadataCid, // The metadata CID
+        ownerId: owner.id,
+        ipfsCid,
+        metadataCid,
         ipAssetId: ipAssetId || null,
         storyChainId: chain,
         storyTxHash: txHash || null,
+        tokenId: tokenId || null,
+        licenseTermsId: licenseTermsId || null,
       },
     });
 
     // 6) Respond
-    return res.status(201).json({
+    const response = {
       ok: true,
       asset,
       owner: { id: owner.id, walletAddress: owner.walletAddress },
-      tx: { chainId: chain, ipAssetId, txHash },
+      tx: { chainId: chain, ipAssetId, txHash, tokenId, licenseTermsId },
       ipfs: { dataCid: ipfsCid, metadataCid },
-    });
+    };
+
+    if (isRealMode() && txHash) {
+      response.explorerUrl = `https://aeneid.storyscan.io/tx/${txHash}`;
+    }
+    if (!isRealMode()) {
+      response.warning = "SYNTHETIC DATA ONLY - No real blockchain transaction occurred.";
+    }
+
+    return res.status(201).json(response);
   } catch (err) {
     console.error("register error:", err);
     return res

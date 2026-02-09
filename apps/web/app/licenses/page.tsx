@@ -9,6 +9,12 @@ import { useWallet } from '@/hooks/use-wallet';
 import { useUserProfile } from '@/hooks/use-user';
 import { useLicenses } from '@/hooks/use-licenses';
 
+const EXPLORER_BASE = 'https://aeneid.storyscan.io';
+
+function isRealHash(hash: string | undefined | null): boolean {
+  return !!hash && !hash.startsWith('0xmocktx') && !hash.startsWith('mock-');
+}
+
 function StatusBadge({ status }: { status: string }) {
   const colors =
     status === 'ISSUED'
@@ -73,12 +79,6 @@ export default function LicensesPage() {
           <Button variant="outline">Browse Assets</Button>
         </Link>
       </div>
-
-      <Alert>
-        <AlertDescription>
-          SYNTHETIC DATA ONLY - These licenses are for demonstration purposes. No real licensing transactions have occurred.
-        </AlertDescription>
-      </Alert>
 
       {/* Stats */}
       <div className="grid gap-4 md:grid-cols-3">
@@ -152,6 +152,43 @@ export default function LicensesPage() {
                           `${license.asset.owner.walletAddress?.slice(0, 6)}...${license.asset.owner.walletAddress?.slice(-4)}`}
                       </p>
                     )}
+                    {/* On-chain details */}
+                    <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1">
+                      {license.chainLicenseId && (
+                        <p className="text-xs text-muted-foreground">
+                          Chain License:{' '}
+                          {isRealHash(license.chainLicenseId) ? (
+                            <a
+                              href={`${EXPLORER_BASE}/tx/${license.chainLicenseId}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-blue-600 hover:underline font-mono"
+                            >
+                              {license.chainLicenseId.slice(0, 10)}...{license.chainLicenseId.slice(-8)}
+                            </a>
+                          ) : (
+                            <span className="font-mono">{license.chainLicenseId}</span>
+                          )}
+                        </p>
+                      )}
+                      {license.txHash && (
+                        <p className="text-xs text-muted-foreground">
+                          Tx:{' '}
+                          {isRealHash(license.txHash) ? (
+                            <a
+                              href={`${EXPLORER_BASE}/tx/${license.txHash}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-blue-600 hover:underline font-mono"
+                            >
+                              {license.txHash.slice(0, 10)}...{license.txHash.slice(-8)}
+                            </a>
+                          ) : (
+                            <span className="font-mono">{license.txHash}</span>
+                          )}
+                        </p>
+                      )}
+                    </div>
                   </div>
                   <div className="flex items-center gap-3">
                     <StatusBadge status={license.status} />

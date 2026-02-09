@@ -8,6 +8,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { TrialForm } from '@/components/trials';
 import { useCreateTrial } from '@/hooks/use-trials';
 import { useWallet } from '@/hooks/use-wallet';
+import { toast } from 'sonner';
 
 export default function CreateTrialPage() {
   const [mounted, setMounted] = useState(false);
@@ -27,9 +28,11 @@ export default function CreateTrialPage() {
         ...data,
         buyerId: address,
       });
+      toast.success('Trial created successfully!');
       router.push('/trials');
     } catch (err) {
       console.error('Failed to create trial:', err);
+      toast.error('Failed to create trial. Please try again.');
     }
   };
 

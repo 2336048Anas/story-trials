@@ -14,7 +14,6 @@ export async function findOrCreateUserByWallet(walletAddress, defaultRole = "CON
   const normalized = walletAddress.toLowerCase();
 
   // Try to find existing user
-  console.log("DEBUG: prisma =", typeof prisma, "prisma.user =", typeof prisma?.user);
   let user = await prisma.user.findUnique({
     where: { walletAddress: normalized },
   });

@@ -2,6 +2,8 @@
 import express from "express";
 import { z } from "zod";
 import { prisma } from "../lib/prisma.js";
+import { mintLicenseTokens } from "../lib/story.js";
+import { isRealMode } from "../lib/synthetic-guard.js";
 import { findOrCreateUserByWallet } from "../lib/user-utils.js";
 
 const router = express.Router();
@@ -148,12 +150,43 @@ router.post("/", async (req, res) => {
     // Find or create buyer
     const buyer = await findOrCreateUserByWallet(buyerAddress, "BUYER");
 
-    // Create the license
+    // Mint license token on-chain if in real mode
+    let txHash = null;
+    let chainLicenseId = null;
+
+    if (isRealMode()) {
+      if (!asset.ipAssetId) {
+        return res.status(400).json({
+          error: "Asset has no IP Asset ID - it must be registered on-chain first.",
+        });
+      }
+      if (!asset.licenseTermsId) {
+        return res.status(400).json({
+          error: "Asset has no license terms - it must have terms attached first.",
+        });
+      }
+
+      const result = await mintLicenseTokens({
+        licensorIpId: asset.ipAssetId,
+        licenseTermsId: asset.licenseTermsId,
+        amount: 1,
+        receiver: buyerAddress,
+        maxMintingFee: 0,
+        maxRevenueShare: 100_000_000,
+      });
+
+      txHash = result.txHash;
+      chainLicenseId = result.licenseTokenIds?.[0] || null;
+    }
+
+    // Create the license record
     const license = await prisma.license.create({
       data: {
         assetId,
         buyerId: buyer.id,
         expiresAt: expiresAt ? new Date(expiresAt) : null,
+        txHash,
+        chainLicenseId,
       },
       include: {
         asset: {
@@ -179,12 +212,19 @@ router.post("/", async (req, res) => {
       },
     });
 
-    return res.status(201).json({
+    const response = {
       ok: true,
       license,
-      warning:
-        "SYNTHETIC DATA ONLY - No real licensing transaction occurred.",
-    });
+    };
+
+    if (isRealMode() && txHash) {
+      response.explorerUrl = `https://aeneid.storyscan.io/tx/${txHash}`;
+    }
+    if (!isRealMode()) {
+      response.warning = "SYNTHETIC DATA ONLY - No real licensing transaction occurred.";
+    }
+
+    return res.status(201).json(response);
   } catch (err) {
     console.error("create license error:", err);
     return res

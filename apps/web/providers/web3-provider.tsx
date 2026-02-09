@@ -6,11 +6,25 @@ import { WagmiProvider } from 'wagmi';
 import { mainnet, sepolia } from 'wagmi/chains';
 import { QueryClientProvider, QueryClient } from '@tanstack/react-query';
 import { ReactNode, useState } from 'react';
+import { type Chain } from 'viem';
+
+const storyAeneid = {
+  id: 1315,
+  name: 'Story Aeneid Testnet',
+  nativeCurrency: { name: 'IP', symbol: 'IP', decimals: 18 },
+  rpcUrls: {
+    default: { http: ['https://aeneid.storyrpc.io'] },
+  },
+  blockExplorers: {
+    default: { name: 'StoryScan', url: 'https://aeneid.storyscan.io' },
+  },
+  testnet: true,
+} as const satisfies Chain;
 
 const config = getDefaultConfig({
   appName: 'Story Trials',
   projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || 'YOUR_PROJECT_ID',
-  chains: [mainnet, sepolia],
+  chains: [mainnet, sepolia, storyAeneid],
   ssr: true,
 });
 

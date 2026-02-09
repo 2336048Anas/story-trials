@@ -9,6 +9,12 @@ import { useUserProfile } from '@/hooks/use-user';
 import { useRoyalties, usePayouts } from '@/hooks/use-royalties';
 import type { RoyaltyEvent, Payout } from '@/types/api';
 
+const EXPLORER_BASE = 'https://aeneid.storyscan.io';
+
+function isRealHash(hash: string | undefined | null): boolean {
+  return !!hash && !hash.startsWith('0xmocktx') && !hash.startsWith('mock-');
+}
+
 function formatCents(cents: number): string {
   return `$${(cents / 100).toFixed(2)}`;
 }
@@ -184,7 +190,26 @@ export default function RoyaltiesPage() {
                     </p>
                     <p className="text-xs text-muted-foreground">
                       {new Date(payout.createdAt).toLocaleDateString()}
-                      {payout.reference ? ` - Ref: ${payout.reference}` : ''}
+                      {payout.reference && (
+                        <>
+                          {' - '}
+                          {isRealHash(payout.reference) ? (
+                            <>
+                              Tx:{' '}
+                              <a
+                                href={`${EXPLORER_BASE}/tx/${payout.reference}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-600 hover:underline font-mono"
+                              >
+                                {payout.reference.slice(0, 10)}...{payout.reference.slice(-8)}
+                              </a>
+                            </>
+                          ) : (
+                            <>Ref: {payout.reference}</>
+                          )}
+                        </>
+                      )}
                     </p>
                   </div>
                   <StatusBadge status={payout.status} />

@@ -4,12 +4,16 @@ import './globals.css';
 import { Web3Provider } from '@/providers/web3-provider';
 import { Navbar } from '@/components/layout/navbar';
 import { Footer } from '@/components/layout/footer';
+import { Toaster } from 'sonner';
 
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
   title: 'Story Trials - Consent-Based Health Data Marketplace',
   description: 'A demonstration platform for consent-based health data sharing using Web3 technologies',
+  icons: {
+    icon: '/favicon.svg',
+  },
 };
 
 export default function RootLayout({
@@ -29,6 +33,7 @@ export default function RootLayout({
             <Footer />
           </div>
         </Web3Provider>
+        <Toaster richColors />
       </body>
     </html>
   );

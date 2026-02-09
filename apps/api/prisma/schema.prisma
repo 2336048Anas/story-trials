@@ -103,9 +103,11 @@ model DataAsset {
   isListed    Boolean  @default(true)
 
   // Story fields...
-  ipAssetId    String?
-  storyChainId Int?
-  storyTxHash  String?
+  ipAssetId      String?
+  storyChainId   Int?
+  storyTxHash    String?
+  tokenId        String? // NFT token ID
+  licenseTermsId String? // Attached license terms ID on Story Protocol
 
   owner       User         @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   licenses    License[]

@@ -116,6 +116,8 @@ export interface DataAsset {
   ipAssetId?: string;
   storyChainId?: number;
   storyTxHash?: string;
+  tokenId?: string;
+  licenseTermsId?: string;
   owner?: {
     id: string;
     walletAddress?: string;
@@ -151,6 +153,7 @@ export interface RegisterAssetResponse {
     chainId: number;
     ipAssetId?: string;
     txHash?: string;
+    explorerUrl?: string;
   };
   ipfs: {
     dataCid: string;

@@ -37,6 +37,14 @@ export function syntheticOnlyMiddleware(req, res, next) {
 }
 
 /**
+ * Returns true when DRY_RUN_STORY is disabled (i.e. real blockchain mode).
+ * Route handlers can use this to conditionally skip synthetic-only guards.
+ */
+export function isRealMode() {
+  return String(process.env.DRY_RUN_STORY || "true").toLowerCase() !== "true";
+}
+
+/**
  * Validates payment amounts are reasonable for synthetic demo data.
  * Prevents accidentally using real-world large amounts.
  */

@@ -10,6 +10,26 @@ import { useAsset } from '@/hooks/use-assets';
 import { useCreateLicense } from '@/hooks/use-licenses';
 import { useWallet } from '@/hooks/use-wallet';
 
+const EXPLORER_BASE = 'https://aeneid.storyscan.io';
+
+function isRealHash(hash: string | undefined | null): boolean {
+  return !!hash && !hash.startsWith('0xmocktx') && !hash.startsWith('mock-');
+}
+
+function ExplorerLink({ hash, type }: { hash: string; type: 'tx' | 'address' }) {
+  const url = `${EXPLORER_BASE}/${type}/${hash}`;
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="text-blue-600 hover:underline font-mono text-xs"
+    >
+      {hash.slice(0, 10)}...{hash.slice(-8)}
+    </a>
+  );
+}
+
 export default function AssetDetailPage() {
   const params = useParams();
   const assetId = params.id as string;
@@ -153,9 +173,15 @@ export default function AssetDetailPage() {
               <div>
                 <h4 className="text-sm font-medium text-gray-500">IP Asset ID</h4>
                 {asset.ipAssetId ? (
-                  <code className="mt-1 block text-xs bg-gray-100 p-2 rounded break-all">
-                    {asset.ipAssetId}
-                  </code>
+                  <div className="mt-1">
+                    {isRealHash(asset.ipAssetId) ? (
+                      <ExplorerLink hash={asset.ipAssetId} type="address" />
+                    ) : (
+                      <code className="block text-xs bg-gray-100 p-2 rounded break-all">
+                        {asset.ipAssetId}
+                      </code>
+                    )}
+                  </div>
                 ) : (
                   <p className="mt-1 text-sm text-gray-400">Not registered</p>
                 )}
@@ -169,14 +195,37 @@ export default function AssetDetailPage() {
               <div>
                 <h4 className="text-sm font-medium text-gray-500">Transaction Hash</h4>
                 {asset.storyTxHash ? (
-                  <code className="mt-1 block text-xs bg-gray-100 p-2 rounded break-all">
-                    {asset.storyTxHash}
-                  </code>
+                  <div className="mt-1">
+                    {isRealHash(asset.storyTxHash) ? (
+                      <ExplorerLink hash={asset.storyTxHash} type="tx" />
+                    ) : (
+                      <code className="block text-xs bg-gray-100 p-2 rounded break-all">
+                        {asset.storyTxHash}
+                      </code>
+                    )}
+                  </div>
                 ) : (
                   <p className="mt-1 text-sm text-gray-400">No transaction</p>
                 )}
               </div>
             </div>
+            {/* Additional blockchain fields */}
+            {(asset.tokenId || asset.licenseTermsId) && (
+              <div className="grid gap-4 md:grid-cols-3 mt-4 pt-4 border-t">
+                {asset.tokenId && (
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">Token ID</h4>
+                    <p className="mt-1 font-mono text-sm">{asset.tokenId}</p>
+                  </div>
+                )}
+                {asset.licenseTermsId && (
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">License Terms ID</h4>
+                    <p className="mt-1 font-mono text-sm">{asset.licenseTermsId}</p>
+                  </div>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -185,15 +234,10 @@ export default function AssetDetailPage() {
           <CardHeader>
             <CardTitle>License This Asset</CardTitle>
             <CardDescription>
-              Acquire a license to use this data asset (synthetic demo only)
+              Acquire a license to use this data asset
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <Alert>
-              <AlertDescription>
-                SYNTHETIC DATA ONLY - No real licensing transaction will occur.
-              </AlertDescription>
-            </Alert>
             {licenseSuccess && (
               <Alert>
                 <AlertDescription>

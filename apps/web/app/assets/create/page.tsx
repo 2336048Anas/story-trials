@@ -10,6 +10,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useWallet } from '@/hooks/use-wallet';
 import { useRegisterAsset } from '@/hooks/use-assets';
+import { toast } from 'sonner';
+
+const EXPLORER_BASE = 'https://aeneid.storyscan.io';
+
+function isRealHash(hash: string | undefined | null): boolean {
+  return !!hash && !hash.startsWith('0xmocktx') && !hash.startsWith('mock-');
+}
 
 export default function CreateAssetPage() {
   const router = useRouter();
@@ -51,11 +58,14 @@ export default function CreateAssetPage() {
       });
 
       setSuccessData(result);
+      toast.success('Asset registered successfully!');
       setTitle('');
       setDescription('');
       setIpfsCid('');
     } catch (err: any) {
-      setError(err.message || 'Failed to register asset');
+      const message = err.message || 'Failed to register asset. Please try again.';
+      setError(message);
+      toast.error(message);
     }
   };
 
@@ -87,12 +97,6 @@ export default function CreateAssetPage() {
         </p>
       </div>
 
-      <Alert>
-        <AlertDescription>
-          This is a demonstration using synthetic data and mock blockchain mode.
-        </AlertDescription>
-      </Alert>
-
       {successData && (
         <Alert className="border-green-500 bg-green-50">
           <AlertDescription className="space-y-2">
@@ -105,27 +109,61 @@ export default function CreateAssetPage() {
               {successData.tx.ipAssetId && (
                 <p>
                   <span className="font-medium">Story Protocol ID:</span>{' '}
-                  <span className="font-mono">{successData.tx.ipAssetId}</span>
+                  {isRealHash(successData.tx.ipAssetId) ? (
+                    <a
+                      href={`${EXPLORER_BASE}/address/${successData.tx.ipAssetId}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-mono text-blue-600 hover:underline"
+                    >
+                      {successData.tx.ipAssetId}
+                    </a>
+                  ) : (
+                    <span className="font-mono">{successData.tx.ipAssetId}</span>
+                  )}
                 </p>
               )}
               {successData.tx.txHash && (
                 <p>
                   <span className="font-medium">Transaction Hash:</span>{' '}
-                  <span className="font-mono text-xs">{successData.tx.txHash}</span>
+                  {isRealHash(successData.tx.txHash) ? (
+                    <a
+                      href={`${EXPLORER_BASE}/tx/${successData.tx.txHash}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-mono text-xs text-blue-600 hover:underline"
+                    >
+                      {successData.tx.txHash}
+                    </a>
+                  ) : (
+                    <span className="font-mono text-xs">{successData.tx.txHash}</span>
+                  )}
                 </p>
               )}
               <p>
                 <span className="font-medium">Chain ID:</span> {successData.tx.chainId}
               </p>
             </div>
-            <Button
-              onClick={() => router.push('/')}
-              variant="outline"
-              size="sm"
-              className="mt-2"
-            >
-              View Marketplace
-            </Button>
+            <div className="flex gap-2 mt-2">
+              <Button
+                onClick={() => router.push('/')}
+                variant="outline"
+                size="sm"
+              >
+                View Marketplace
+              </Button>
+              {successData.tx.txHash && isRealHash(successData.tx.txHash) && (
+                <a
+                  href={`${EXPLORER_BASE}/tx/${successData.tx.txHash}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <Button variant="outline" size="sm">
+                    View on Explorer
+                  </Button>
+                </a>
+              )}
+            </div>
           </AlertDescription>
         </Alert>
       )}
@@ -186,7 +224,7 @@ export default function CreateAssetPage() {
               disabled={registerAsset.isPending}
               className="w-full"
             >
-              {registerAsset.isPending ? 'Registering...' : 'Register Asset'}
+              {registerAsset.isPending ? 'Registering on Story Protocol...' : 'Register Asset'}
             </Button>
           </form>
         </CardContent>
