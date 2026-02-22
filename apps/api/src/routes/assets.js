@@ -3,7 +3,7 @@ import express from "express";
 import { z } from "zod";
 import { prisma } from "../lib/prisma.js";
 import { makeIpfsClient, addJson } from "../lib/ipfs.js";
-import { mintAndRegisterIpWithTerms, PILFlavor } from "../lib/story.js";
+import { mintAndRegisterIpWithTerms, PILFlavor, WIP_TOKEN_ADDRESS } from "../lib/story.js";
 import { isRealMode } from "../lib/synthetic-guard.js";
 import { findOrCreateUserByWallet } from "../lib/user-utils.js";
 
@@ -129,7 +129,11 @@ router.post("/register", async (req, res) => {
         spgNftContract: process.env.SPG_NFT_CONTRACT,
         licenseTermsData: [
           {
-            terms: PILFlavor.nonCommercialSocialRemixing,
+            terms: PILFlavor.commercialRemix({
+              defaultMintingFee: 0,
+              commercialRevShare: 10, // 10% revenue share
+              currency: WIP_TOKEN_ADDRESS,
+            }),
           },
         ],
         ipMetadata: {
@@ -165,8 +169,7 @@ router.post("/register", async (req, res) => {
         ipAssetId: ipAssetId || null,
         storyChainId: chain,
         storyTxHash: txHash || null,
-        tokenId: tokenId || null,
-        licenseTermsId: licenseTermsId || null,
+        termsRef: licenseTermsId ? String(licenseTermsId) : null,
       },
     });
 

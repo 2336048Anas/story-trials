@@ -307,6 +307,31 @@ export interface PayoutsResponse {
   warning: string;
 }
 
+// Claimable revenue types
+export interface ClaimableResponse {
+  ok: boolean;
+  claimableAmount: string;
+}
+
+export interface ClaimRevenuePayload {
+  ancestorIpId: string;
+  claimer: string;
+  childIpIds: string[];
+  royaltyPolicies: string[];
+  currencyTokens: string[];
+}
+
+export interface ClaimRevenueResponse {
+  ok: boolean;
+  txHashes: string[];
+  claimedTokens: {
+    claimer: string;
+    token: string;
+    amount: string;
+  }[];
+  explorerUrl?: string;
+}
+
 // User profile types
 export interface UserProfile extends User {
   _count?: {

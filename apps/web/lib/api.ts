@@ -25,6 +25,9 @@ import type {
   UserAssetsResponse,
   UserTrialsResponse,
   UserSubmissionsResponse,
+  ClaimableResponse,
+  ClaimRevenuePayload,
+  ClaimRevenueResponse,
 } from '@/types/api';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
@@ -133,6 +136,13 @@ export const api = {
       fetchApi<RoyaltiesResponse>(`/payments/royalties?recipientId=${encodeURIComponent(recipientId)}`),
     listPayouts: (recipientId: string) =>
       fetchApi<PayoutsResponse>(`/payments/payouts?recipientId=${encodeURIComponent(recipientId)}`),
+    checkClaimable: (ipId: string, claimer: string) =>
+      fetchApi<ClaimableResponse>(`/payments/royalties/claimable?ipId=${encodeURIComponent(ipId)}&claimer=${encodeURIComponent(claimer)}`),
+    claimRevenue: (data: ClaimRevenuePayload) =>
+      fetchApi<ClaimRevenueResponse>('/payments/royalties/claim', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
   },
 
   // Users

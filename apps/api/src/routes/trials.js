@@ -78,8 +78,9 @@ router.post("/", syntheticOnlyMiddleware, async (req, res) => {
 // List trials
 router.get("/", async (req, res) => {
   try {
+    const showAll = req.query.all === "true";
     const trials = await prisma.trial.findMany({
-      where: { isOpen: true },
+      where: showAll ? {} : { isOpen: true },
       include: {
         buyer: {
           select: { id: true, name: true, walletAddress: true },

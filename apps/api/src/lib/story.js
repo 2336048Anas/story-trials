@@ -222,7 +222,10 @@ export async function claimRevenue({
 
   return {
     txHashes: result.txHashes,
-    claimedTokens: result.claimedTokens,
+    claimedTokens: result.claimedTokens?.map(t => ({
+      ...t,
+      amount: String(t.amount),
+    })) || [],
   };
 }
 

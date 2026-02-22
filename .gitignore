@@ -12,4 +12,6 @@ claude.md
 .claude/
 setup-postgres.sh
 docs-backup/
-.git.backup/
+.git.backup/.env
+.data/
+apps/web/.env

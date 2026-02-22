@@ -4,10 +4,12 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { useWallet } from '@/hooks/use-wallet';
 import { useUserProfile } from '@/hooks/use-user';
-import { useRoyalties, usePayouts } from '@/hooks/use-royalties';
-import type { RoyaltyEvent, Payout } from '@/types/api';
+import { useUserAssets } from '@/hooks/use-user';
+import { useRoyalties, usePayouts, useClaimableRevenue, useClaimRevenue } from '@/hooks/use-royalties';
+import type { RoyaltyEvent, Payout, DataAsset } from '@/types/api';
 
 const EXPLORER_BASE = 'https://aeneid.storyscan.io';
 
@@ -22,6 +24,128 @@ function formatCents(cents: number): string {
 function StatusBadge({ status }: { status: string }) {
   const variant = status === 'PAID' ? 'default' : status === 'FAILED' ? 'destructive' : 'secondary';
   return <Badge variant={variant}>{status}</Badge>;
+}
+
+const WIP_TOKEN = '0x1514000000000000000000000000000000000000';
+
+function ClaimableAssetRow({ asset }: { asset: DataAsset }) {
+  const ipId = asset.ipAssetId;
+  const { data: claimableData, isLoading, refetch } = useClaimableRevenue(ipId || undefined, ipId || undefined);
+  const claimMutation = useClaimRevenue();
+  const [claimResult, setClaimResult] = useState<{ txHash?: string; amount?: string } | null>(null);
+
+  const claimableAmount = claimableData?.claimableAmount || '0';
+  const hasClaimable = claimableAmount !== '0';
+
+  const handleClaim = async () => {
+    if (!ipId) return;
+    setClaimResult(null);
+    try {
+      const result = await claimMutation.mutateAsync({
+        ancestorIpId: ipId,
+        claimer: ipId,
+        childIpIds: [],
+        royaltyPolicies: [],
+        currencyTokens: [WIP_TOKEN],
+      });
+      setClaimResult({
+        txHash: result.txHashes?.[0],
+        amount: result.claimedTokens?.[0]?.amount,
+      });
+      refetch();
+    } catch (err) {
+      // error handled by mutation state
+    }
+  };
+
+  if (!ipId) return null;
+
+  return (
+    <div className="flex items-center justify-between p-4 border rounded-lg">
+      <div className="flex-1 min-w-0">
+        <p className="font-medium truncate">{asset.title}</p>
+        <p className="text-xs text-muted-foreground font-mono mt-1">
+          {ipId.slice(0, 10)}...{ipId.slice(-8)}
+        </p>
+        {claimResult && (
+          <div className="mt-2">
+            <Badge variant="default" className="text-xs">
+              Claimed {claimResult.amount} WIP
+            </Badge>
+            {claimResult.txHash && (
+              <a
+                href={`https://aeneid.storyscan.io/tx/${claimResult.txHash}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-blue-600 hover:underline ml-2"
+              >
+                View tx →
+              </a>
+            )}
+          </div>
+        )}
+        {claimMutation.error && (
+          <p className="text-xs text-red-600 mt-1">
+            Claim failed: {claimMutation.error.message}
+          </p>
+        )}
+      </div>
+      <div className="flex items-center gap-3 ml-4">
+        <div className="text-right">
+          {isLoading ? (
+            <p className="text-sm text-muted-foreground">Checking...</p>
+          ) : (
+            <>
+              <p className={`text-lg font-bold ${hasClaimable ? 'text-green-600' : 'text-muted-foreground'}`}>
+                {claimableAmount}
+              </p>
+              <p className="text-xs text-muted-foreground">WIP claimable</p>
+            </>
+          )}
+        </div>
+        <Button
+          size="sm"
+          onClick={handleClaim}
+          disabled={!hasClaimable || claimMutation.isPending}
+        >
+          {claimMutation.isPending ? 'Claiming...' : 'Claim'}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function ClaimRevenueSection({ address }: { address: string | undefined }) {
+  const { data: assetsData, isLoading } = useUserAssets(address);
+  const assets = assetsData?.assets?.filter((a: DataAsset) => a.ipAssetId) ?? [];
+
+  if (!address) return null;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>On-Chain Revenue</CardTitle>
+        <CardDescription>
+          Check and claim accumulated royalties from your IP Assets&apos; royalty vaults on Story Protocol
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {isLoading ? (
+          <p className="text-muted-foreground">Loading your assets...</p>
+        ) : assets.length > 0 ? (
+          <div className="space-y-3">
+            {assets.map((asset: DataAsset) => (
+              <ClaimableAssetRow key={asset.id} asset={asset} />
+            ))}
+          </div>
+        ) : (
+          <p className="text-muted-foreground text-center py-4">
+            No registered IP assets found. Register an asset to start earning royalties.
+          </p>
+        )}
+      </CardContent>
+    </Card>
+  );
 }
 
 export default function RoyaltiesPage() {
@@ -119,6 +243,9 @@ export default function RoyaltiesPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* On-Chain Claim Section */}
+      <ClaimRevenueSection address={address} />
 
       {/* Royalty Events */}
       <Card>

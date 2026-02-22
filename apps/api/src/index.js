@@ -30,6 +30,14 @@ app.use("/licenses", licensesRouter);
 
 app.use((req, res) => res.status(404).json({ ok: false, error: "Not found" }));
 
+// Global error handlers — prevent silent crashes
+process.on("uncaughtException", (err) => {
+  console.error("Uncaught exception:", err);
+});
+process.on("unhandledRejection", (reason) => {
+  console.error("Unhandled rejection:", reason);
+});
+
 const PORT = Number(process.env.PORT || 4000);
 const HOST = process.env.HOST || "0.0.0.0";
 app.listen(PORT, HOST, () => {

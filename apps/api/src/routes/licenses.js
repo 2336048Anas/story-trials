@@ -160,7 +160,7 @@ router.post("/", async (req, res) => {
           error: "Asset has no IP Asset ID - it must be registered on-chain first.",
         });
       }
-      if (!asset.licenseTermsId) {
+      if (!asset.termsRef) {
         return res.status(400).json({
           error: "Asset has no license terms - it must have terms attached first.",
         });
@@ -168,11 +168,11 @@ router.post("/", async (req, res) => {
 
       const result = await mintLicenseTokens({
         licensorIpId: asset.ipAssetId,
-        licenseTermsId: asset.licenseTermsId,
+        licenseTermsId: asset.termsRef,
         amount: 1,
         receiver: buyerAddress,
         maxMintingFee: 0,
-        maxRevenueShare: 100_000_000,
+        maxRevenueShare: 100,
       });
 
       txHash = result.txHash;
