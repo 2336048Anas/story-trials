@@ -1,10 +1,15 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
-import { Web3Provider } from '@/providers/web3-provider';
+import dynamic from 'next/dynamic';
 import { Navbar } from '@/components/layout/navbar';
 import { Footer } from '@/components/layout/footer';
 import { Toaster } from 'sonner';
+
+const Web3Provider = dynamic(
+  () => import('@/providers/web3-provider').then((mod) => mod.Web3Provider),
+  { ssr: false }
+);
 
 const inter = Inter({ subsets: ['latin'] });
 

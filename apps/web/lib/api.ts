@@ -39,121 +39,191 @@ export class ApiError extends Error {
   }
 }
 
-async function fetchApi<T>(
-  endpoint: string,
-  options?: RequestInit
-): Promise<T> {
-  const url = `${API_BASE_URL}${endpoint}`;
+type QueryValue = string | number | boolean | null | undefined;
 
-  const response = await fetch(url, {
-    ...options,
+function buildUrl(path: string, query?: Record<string, QueryValue>) {
+  const url = new URL(path, API_BASE_URL);
+
+  if (query) {
+    for (const [key, value] of Object.entries(query)) {
+      if (value !== undefined && value !== null) {
+        url.searchParams.set(key, String(value));
+      }
+    }
+  }
+
+  return url;
+}
+
+async function parseError(response: Response) {
+  const contentType = response.headers.get('content-type') || '';
+
+  if (contentType.includes('application/json')) {
+    const data = await response.json().catch(() => null);
+    if (data?.error) return data.error as string;
+    if (data?.details) return data.details as string;
+    if (data?.issues) return 'Request validation failed';
+    if (data?.message) return data.message as string;
+  }
+
+  const text = await response.text().catch(() => '');
+  return text || `Request failed with status ${response.status}`;
+}
+
+async function request<T>(
+  path: string,
+  init?: RequestInit,
+  query?: Record<string, QueryValue>,
+): Promise<T> {
+  const response = await fetch(buildUrl(path, query), {
+    ...init,
     headers: {
-      'Content-Type': 'application/json',
-      ...options?.headers,
+      Accept: 'application/json',
+      ...(init?.body ? { 'Content-Type': 'application/json' } : {}),
+      ...init?.headers,
     },
   });
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: 'Unknown error' }));
-    throw new ApiError(response.status, error.error || 'Request failed');
+    throw new ApiError(response.status, await parseError(response));
   }
 
-  return response.json();
+  return response.json() as Promise<T>;
 }
 
 export const api = {
-  // Health check
-  health: () => fetchApi('/health'),
+  health: async () => {
+    return request<{ ok: true; service: string; syntheticDataOnly: boolean; note: string }>('/health');
+  },
 
-  // Trials
   trials: {
-    list: () => fetchApi<TrialsResponse>('/trials'),
-    get: (id: string) => fetchApi<TrialResponse>(`/trials/${id}`),
-    create: (data: CreateTrialPayload) =>
-      fetchApi<CreateTrialResponse>('/trials', {
+    list: async (): Promise<TrialsResponse> => {
+      return request<TrialsResponse>('/trials');
+    },
+    get: async (id: string): Promise<TrialResponse> => {
+      return request<TrialResponse>(`/trials/${id}`);
+    },
+    create: async (data: CreateTrialPayload): Promise<CreateTrialResponse> => {
+      return request<CreateTrialResponse>('/trials', {
         method: 'POST',
         body: JSON.stringify(data),
-      }),
-    update: (id: string, data: UpdateTrialPayload) =>
-      fetchApi<TrialResponse>(`/trials/${id}`, {
+      });
+    },
+    update: async (id: string, data: UpdateTrialPayload): Promise<TrialResponse> => {
+      return request<TrialResponse>(`/trials/${id}`, {
         method: 'PATCH',
         body: JSON.stringify(data),
-      }),
+      });
+    },
   },
 
-  // Submissions
   submissions: {
-    list: (trialId: string) =>
-      fetchApi<SubmissionsResponse>(`/trials/${trialId}/submissions`),
-    create: (trialId: string, data: CreateSubmissionPayload) =>
-      fetchApi<SubmissionResponse>(`/trials/${trialId}/submissions`, {
+    list: async (trialId: string): Promise<SubmissionsResponse> => {
+      return request<SubmissionsResponse>(`/trials/${trialId}/submissions`);
+    },
+    create: async (trialId: string, data: CreateSubmissionPayload): Promise<SubmissionResponse> => {
+      return request<SubmissionResponse>(`/trials/${trialId}/submissions`, {
         method: 'POST',
         body: JSON.stringify(data),
-      }),
-    update: (trialId: string, submissionId: string, data: UpdateSubmissionPayload) =>
-      fetchApi<SubmissionResponse>(`/trials/${trialId}/submissions/${submissionId}`, {
+      });
+    },
+    update: async (
+      trialId: string,
+      submissionId: string,
+      data: UpdateSubmissionPayload,
+    ): Promise<SubmissionResponse> => {
+      return request<SubmissionResponse>(`/trials/${trialId}/submissions/${submissionId}`, {
         method: 'PATCH',
         body: JSON.stringify(data),
-      }),
+      });
+    },
   },
 
-  // Assets
   assets: {
-    list: () => fetchApi<{ ok: true; assets: any[] }>('/assets'),
-    get: (id: string) => fetchApi<AssetResponse>(`/assets/${id}`),
-    register: (data: RegisterAssetPayload) =>
-      fetchApi<RegisterAssetResponse>('/assets/register', {
+    list: async (): Promise<{ ok: true; assets: any[] }> => {
+      return request<{ ok: true; assets: any[] }>('/assets');
+    },
+    get: async (id: string): Promise<AssetResponse> => {
+      return request<AssetResponse>(`/assets/${id}`);
+    },
+    register: async (data: RegisterAssetPayload): Promise<RegisterAssetResponse> => {
+      const response = await request<
+        RegisterAssetResponse & { explorerUrl?: string }
+      >('/assets/register', {
         method: 'POST',
         body: JSON.stringify(data),
-      }),
+      });
+
+      return {
+        ...response,
+        tx: {
+          ...response.tx,
+          explorerUrl: response.tx.explorerUrl || response.explorerUrl,
+        },
+      };
+    },
   },
 
-  // Licenses
   licenses: {
-    list: (buyerId?: string) =>
-      fetchApi<LicensesResponse>(buyerId ? `/licenses?buyerId=${encodeURIComponent(buyerId)}` : '/licenses'),
-    get: (id: string) => fetchApi<LicenseResponse>(`/licenses/${id}`),
-    create: (data: CreateLicensePayload) =>
-      fetchApi<CreateLicenseResponse>('/licenses', {
+    list: async (buyerId?: string): Promise<LicensesResponse> => {
+      return request<LicensesResponse>('/licenses', undefined, { buyerId });
+    },
+    get: async (id: string): Promise<LicenseResponse> => {
+      return request<LicenseResponse>(`/licenses/${id}`);
+    },
+    create: async (data: CreateLicensePayload): Promise<CreateLicenseResponse> => {
+      return request<CreateLicenseResponse>('/licenses', {
         method: 'POST',
         body: JSON.stringify(data),
-      }),
+      });
+    },
   },
 
-  // Payments (synthetic only)
   payments: {
-    create: (data: CreatePaymentPayload) =>
-      fetchApi<CreatePaymentResponse>('/payments', {
+    create: async (data: CreatePaymentPayload): Promise<CreatePaymentResponse> => {
+      return request<CreatePaymentResponse>('/payments', {
         method: 'POST',
         body: JSON.stringify(data),
-      }),
-    createRoyalty: (data: CreateRoyaltyPayload) =>
-      fetchApi<CreateRoyaltyResponse>('/payments/royalties', {
+      });
+    },
+    createRoyalty: async (data: CreateRoyaltyPayload): Promise<CreateRoyaltyResponse> => {
+      return request<CreateRoyaltyResponse>('/payments/royalties', {
         method: 'POST',
         body: JSON.stringify(data),
-      }),
-    listRoyalties: (recipientId: string) =>
-      fetchApi<RoyaltiesResponse>(`/payments/royalties?recipientId=${encodeURIComponent(recipientId)}`),
-    listPayouts: (recipientId: string) =>
-      fetchApi<PayoutsResponse>(`/payments/payouts?recipientId=${encodeURIComponent(recipientId)}`),
-    checkClaimable: (ipId: string, claimer: string) =>
-      fetchApi<ClaimableResponse>(`/payments/royalties/claimable?ipId=${encodeURIComponent(ipId)}&claimer=${encodeURIComponent(claimer)}`),
-    claimRevenue: (data: ClaimRevenuePayload) =>
-      fetchApi<ClaimRevenueResponse>('/payments/royalties/claim', {
+      });
+    },
+    listRoyalties: async (recipientId: string): Promise<RoyaltiesResponse> => {
+      return request<RoyaltiesResponse>('/payments/royalties', undefined, { recipientId });
+    },
+    listPayouts: async (recipientId: string): Promise<PayoutsResponse> => {
+      return request<PayoutsResponse>('/payments/payouts', undefined, { recipientId });
+    },
+    checkClaimable: async (ipId: string, claimer: string): Promise<ClaimableResponse> => {
+      return request<ClaimableResponse>('/payments/royalties/claimable', undefined, {
+        ipId,
+        claimer,
+      });
+    },
+    claimRevenue: async (data: ClaimRevenuePayload): Promise<ClaimRevenueResponse> => {
+      return request<ClaimRevenueResponse>('/payments/royalties/claim', {
         method: 'POST',
         body: JSON.stringify(data),
-      }),
+      });
+    },
   },
 
-  // Users
   users: {
-    get: (address: string) =>
-      fetchApi<UserProfileResponse>(`/users/${address}`),
-    assets: (address: string) =>
-      fetchApi<UserAssetsResponse>(`/users/${address}/assets`),
-    trials: (address: string) =>
-      fetchApi<UserTrialsResponse>(`/users/${address}/trials`),
-    submissions: (address: string) =>
-      fetchApi<UserSubmissionsResponse>(`/users/${address}/submissions`),
+    get: async (address: string): Promise<UserProfileResponse> => {
+      return request<UserProfileResponse>(`/users/${address}`);
+    },
+    assets: async (address: string): Promise<UserAssetsResponse> => {
+      return request<UserAssetsResponse>(`/users/${address}/assets`);
+    },
+    trials: async (address: string): Promise<UserTrialsResponse> => {
+      return request<UserTrialsResponse>(`/users/${address}/trials`);
+    },
+    submissions: async (address: string): Promise<UserSubmissionsResponse> => {
+      return request<UserSubmissionsResponse>(`/users/${address}/submissions`);
+    },
   },
 };
